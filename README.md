@@ -8,12 +8,3 @@ Step 2: Compile Python Code into an executable file (if using pyinstaller, use c
 [!] Make Sure you set --noconsole so no DOS Prompt pops up on victim machine.
 [!] Works better on Windows 10 (compatible with: Windows 10, Linux)
 
----[ All Commands ]---
-
-[-tc] Terminate Connection
-[-ac] Append Connection to Background
-[-sm] Send Message (VBS-Box)
-[-ow] Open Webpage
-[-ss] Capture Screenshot
-[-cw] Capture Webcam
-
