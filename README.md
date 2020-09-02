@@ -10,10 +10,10 @@ Step 2: Compile Python Code into an executable file (if using pyinstaller, use c
 
 ---[ All Commands ]---
 
-(Connection Commands)
-
 [-tc] Terminate Connection
 [-ac] Append Connection to Background
-
-(User Interface Commands)
+[-sm] Send Message (VBS-Box)
+[-ow] Open Webpage
+[-ss] Capture Screenshot
+[-cw] Capture Webcam
 
