@@ -148,6 +148,7 @@ def PythonInterpreter():
         print("\n[Remote Machine Output]\n" + "-"*23 + "\n<No Output>\n")
     else:
         print("\n[Remote Machine Output]\n" + "-"*23 + f"\n{SplitOutput[0]}")
+        
     os.remove("code.txt")
 
 def RemoteCMD():
