@@ -1,3 +1,4 @@
+_______________________________________
 (Connection Commands)                  |
                                        |
 [-tc] Terminate Connection             |
@@ -16,8 +17,6 @@ _______________________________________|
 [-sp] Start Process on Remote Machine  |
 [-pi] Remote Python Interpreter        |
 [-rs] Remote CMD Shell                 |
-[-su] Register to Startup              |
-[-ru] Remove from Startup              |
 [-sc] Shutdown Computer                |
 [-rc] Restart Computer                 |
 [-lc] Lock Computer                    |
