@@ -2,7 +2,7 @@ import socket, subprocess, os, time, platform, sys, pyscreeze, urllib.request, c
 from io import StringIO
 
 # Socket Properties
-HOST = "192.168.0.222"
+HOST = ""
 PORT = 3000
 
 # Defines (Send & Recv) Functions for use
