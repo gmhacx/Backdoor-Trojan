@@ -255,4 +255,4 @@ while (True):
             Delete()
 
     except (socket.error, Exception):
-        objSocket.close(); del(objSocket); main()
+        ClearFiles(); objSocket.close(); del(objSocket); main()
