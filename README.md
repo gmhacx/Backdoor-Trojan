@@ -7,5 +7,5 @@ Step 2: Compile Python Code into an executable file (if using pyinstaller, use c
 
 [!] Make Sure you set --noconsole so no DOS Prompt pops up on victim machine.
 
-[!] Operating Systems: (Windows, Linux)
+[!] Compatible with: (Windows, Linux)
 
