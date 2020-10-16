@@ -30,4 +30,4 @@ _______________________________________|
 [-dl] Delete File/Directory            |
 _______________________________________|
 
-[!] When Client Executable starts on target machine, it automatically copies itself to the startup folder and deletes itself in the previous folder. Therefore upon shutdown or restart you can still remotely connect to client.
+[!] When Client Executable file runs on target machine, it automatically copies itself to the startup folder and deletes itself in the previous folder. Therefore upon shutdown or restart you can still remotely connect to the client.
