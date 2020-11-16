@@ -4,7 +4,7 @@ from io import StringIO # Purpose: Python Interpreter (receiving output)
 # Socket Properties
 HOST = ""
 PORT = 10000
-buffer = 1024
+buffer = 0x400
 
 # Defines shorter/simpler (Send & Recv) Functions for use
 send = lambda data: objSocket.send(data)
