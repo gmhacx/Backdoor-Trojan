@@ -7,7 +7,7 @@ PORT = 10000
 # Defines shorter/simpler (Send & Recv) Functions for use
 send = lambda data: conn.send(data)
 recv = lambda buffer: conn.recv(buffer)
-buffer = 1024
+buffer = 0x400
 delay = 0.3
 
 os.system("clear" if os.name == "posix" else "cls")
