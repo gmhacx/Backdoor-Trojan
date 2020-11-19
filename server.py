@@ -62,7 +62,7 @@ def UsableCommands():
           "                                       |")
     print("[-si] View System Information          |")
     print("[-pi] Remote Python Interpreter        |")
-    print("[-rs] Remote CMD Shell                 |")
+    print("[-rs] Remote Powershell                |")
     print("_______________________________________|")
     print("(File Commands)                        |\n" + \
           "                                       |")
