@@ -144,8 +144,8 @@ def RemotePowershell():
         elif (PS_Command == "cls" or PS_Command == "clear"):
             os.system("clear" if os.name == "posix" else "cls")
 
-        elif (PS_Command == "cmd" or PS_Command == "start"):
-            print("Currently in CMD")
+        elif (PS_Command == "powershell" or PS_Command == "cmd" or PS_Command == "start"):
+            print("Currently in Poweshell")
 
         elif (PS_Command == "cd"):
             print("Cannot change Directory")
